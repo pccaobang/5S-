@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản lý 5S PC Cao Bằng</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style/dist/xlsx.bundle.js"></script>
+
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      background:#eef3f8;
+      padding:20px;
+      margin:0;
+    }
+
+    .header{
+      background:linear-gradient(135deg,#006bb6,#00a3e0);
+      color:white;
+      padding:28px;
+      border-radius:18px;
+      margin-bottom:22px;
+      box-shadow:0 6px 16px rgba(0,0,0,0.18);
+    }
+
+    .header h1{
+      margin:0 0 22px 0;
+      font-size:36px;
+      letter-spacing:1px;
+      text-align:center;
+    }
+
+    .company-summary{
+      max-width:1350px;
+      margin:0 auto 22px auto;
+      background:rgba(255,255,255,0.18);
+      padding:18px;
+      border-radius:16px;
+    }
+
+    .company-summary h2{
+      margin:0 0 16px 0;
+      font-size:24px;
+      text-align:center;
+    }
+
+    .summary-grid{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:12px;
+    }
+
+    .summary-card{
+      background:white;
+      color:#003366;
+      border-radius:12px;
+      padding:15px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.16);
+    }
+
+    .summary-title{
+      font-weight:bold;
+      font-size:16px;
+      margin-bottom:8px;
+      color:#005baa;
+    }
+
+    .summary-line{
+      font-size:13px;
+      margin:6px 0;
+      color:#333;
+    }
+
+    .summary-value{
+      font-weight:bold;
+      color:#003366;
+    }
+
+    .control-panel{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .control-panel label{
+      font-size:17px;
+      font-weight:bold;
+    }
+
+    select{
+      padding:11px;
+      font-size:16px;
+      border-radius:9px;
+      border:1px solid #ccc;
+      width:300px;
+    }
+
+    button, .sheet-btn{
+      background:white;
+      color:#005baa;
+      border:none;
+      text-decoration:none;
+      padding:12px 16px;
+      border-radius:10px;
+      font-size:15px;
+      font-weight:bold;
+      cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,0.18);
+      transition:0.25s;
+      display:inline-block;
+    }
+
+    button:hover, .sheet-btn:hover{
+      background:#dff1ff;
+      transform:translateY(-2px);
+    }
+
+    .export-btn{
+      color:#006b2e;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:22px;
+    }
+
+    .card{
+      background:white;
+      padding:20px;
+      border-radius:18px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.12);
+      min-height:560px;
+    }
+
+    .card h3{
+      margin-top:0;
+      color:#003366;
+      font-size:22px;
+    }
+
+    .kpi-row{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr 1fr;
+      gap:12px;
+      margin-bottom:15px;
+    }
+
+    .kpi{
+      background:#f1f6ff;
+      border-left:5px solid #0072bc;
+      padding:12px;
+      border-radius:12px;
+      text-align:center;
+    }
+
+    .kpi-title{
+      font-size:13px;
+      color:#555;
+    }
+
+    .kpi-value{
+      font-size:19px;
+      font-weight:bold;
+      color:#003366;
+      margin-top:5px;
+    }
+
+    canvas{
+      max-width:100%;
+      height:350px !important;
+    }
+
+    @media(max-width:1200px){
+      .summary-grid{
+        grid-template-columns:repeat(2,1fr);
+      }
+    }
+
+    @media(max-width:900px){
+      .grid{
+        grid-template-columns:1fr;
+      }
+
+      .kpi-row{
+        grid-template-columns:1fr 1fr;
+      }
+
+      .summary-grid{
+        grid-template-columns:1fr;
+      }
+
+      .header h1{
+        font-size:28px;
+      }
+
+      select{
+        width:100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+
+  <h1>QUẢN LÝ 5S PC CAO BẰNG</h1>
+
+  <div class="company-summary">
+    <h2>LŨY KẾ THỰC HIỆN PC CAO BẰNG</h2>
+    <div class="summary-grid" id="companySummary"></div>
+  </div>
+
+  <div class="control-panel">
+
+    <label>Chọn Điện lực:</label>
+
+    <select id="dienlucSelect"></select>
+
+    <button id="reloadBtn">
+      🔄 Cập nhật dữ liệu mới nhất
+    </button>
+
+    <a
+      href="https://docs.google.com/spreadsheets/d/1bQ8fiH2be9M04tVvgFOUIQ7f4THWmGq_-rQlCOLc4rI/edit?gid=2060633231#gid=2060633231"
+      target="_blank"
+      class="sheet-btn"
+    >
+      📊 Dữ liệu 5S
+    </a>
+
+    <button class="export-btn" onclick="exportSheet('KH_THANG_NAY','Ke_hoach_thang_nay.xlsx')">
+      📥 Kế hoạch tháng này
+    </button>
+
+    <button class="export-btn" onclick="exportSheet('THUC_HIEN_THANG_TRUOC','Thuc_hien_thang_truoc.xlsx')">
+      📥 Thực hiện tháng trước
+    </button>
+
+  </div>
+
+</div>
+
+<div class="grid">
+
+  <div class="card" id="card110">
+    <h3>Đường dây 110kV</h3>
+    <div class="kpi-row" id="kpi110"></div>
+    <canvas id="chart110"></canvas>
+  </div>
+
+  <div class="card" id="card35">
+    <h3>Đường dây 35kV</h3>
+    <div class="kpi-row" id="kpi35"></div>
+    <canvas id="chart35"></canvas>
+  </div>
+
+  <div class="card" id="card22">
+    <h3>Đường dây 22kV</h3>
+    <div class="kpi-row" id="kpi22"></div>
+    <canvas id="chart22"></canvas>
+  </div>
+
+  <div class="card" id="card04">
+    <h3>Đường dây 0.4kV</h3>
+    <div class="kpi-row" id="kpi04"></div>
+    <canvas id="chart04"></canvas>
+  </div>
+
+  <div class="card" id="cardTBA">
+    <h3>Khối lượng TBA</h3>
+    <div class="kpi-row" id="kpiTBA"></div>
+    <canvas id="chartTBA"></canvas>
+  </div>
+
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwid_Ylociy3LiqFoWXSeFxbVwhKGCJktYGrvW5nEWxj318jz0OPSC4-Vp9NOhRr3TzzQ/exec";
+
+let allData = [];
+let chart110, chart35, chart22, chart04, chartTBA;
+
+const hangMucList = ["110kV","35kV","22kV","0.4kV","TBA"];
+
+function tenHangMuc(hm){
+  if(hm === "110kV") return "Đường dây 110kV";
+  if(hm === "35kV") return "Đường dây 35kV";
+  if(hm === "22kV") return "Đường dây 22kV";
+  if(hm === "0.4kV") return "Đường dây 0.4kV";
+  if(hm === "TBA") return "Khối lượng TBA";
+  return hm;
+}
+
+function num(value){
+  if(value === "" || value === null || value === undefined) return 0;
+
+  let text = String(value)
+    .trim()
+    .replace(",", ".");
+
+  if(text === "") return 0;
+
+  return Number(text) || 0;
+}
+
+function normalizeText(text){
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getBaoCao(item){
+  const key = Object.keys(item).find(k =>
+    normalizeText(k).includes("bao cao")
+  );
+
+  if(!key) return 0;
+  return num(item[key]);
+}
+
+function formatNumber(value){
+  return Number(value).toFixed(2);
+}
+
+async function loadData(){
+  const btn = document.getElementById("reloadBtn");
+
+  try{
+    btn.innerText = "Đang cập nhật...";
+    btn.disabled = true;
+
+    const cacheUrl = API_URL.includes("?")
+      ? API_URL + "&t=" + new Date().getTime()
+      : API_URL + "?t=" + new Date().getTime();
+
+    const response = await fetch(cacheUrl);
+    allData = await response.json();
+
+    renderCompanySummary();
+    loadDienLuc();
+
+    btn.innerText = "🔄 Cập nhật dữ liệu mới nhất";
+    btn.disabled = false;
+
+  }catch(error){
+    console.error(error);
+    alert("Không tải được dữ liệu. Kiểm tra lại URL API.");
+    btn.innerText = "🔄 Cập nhật dữ liệu mới nhất";
+    btn.disabled = false;
+  }
+}
+
+async function exportSheet(sheetName, fileName){
+
+  try{
+    const exportUrl = API_URL.includes("?")
+      ? API_URL + "&action=export&sheet=" + encodeURIComponent(sheetName) + "&t=" + new Date().getTime()
+      : API_URL + "?action=export&sheet=" + encodeURIComponent(sheetName) + "&t=" + new Date().getTime();
+
+    const response = await fetch(exportUrl);
+    const result = await response.json();
+
+    if(!result.success){
+      alert(result.message || "Không xuất được dữ liệu.");
+      return;
+    }
+
+    const data = result.data;
+
+    if(!data || data.length === 0){
+      alert("Sheet không có dữ liệu để xuất.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
+
+    worksheet["!cols"] = data[0].map((_, colIndex) => {
+      let maxLength = 10;
+
+      data.forEach(row => {
+        const cellValue = row[colIndex] ? String(row[colIndex]) : "";
+        if(cellValue.length > maxLength){
+          maxLength = cellValue.length;
+        }
+      });
+
+      return {
+        wch: Math.min(maxLength + 4, 45)
+      };
+    });
+
+    worksheet["!rows"] = data.map((row, index) => {
+      if(index === 0){
+        return { hpt: 42 };
+      }
+      return { hpt: 26 };
+    });
+
+    for(let R = range.s.r; R <= range.e.r; ++R){
+      for(let C = range.s.c; C <= range.e.c; ++C){
+
+        const cellAddress = XLSX.utils.encode_cell({r:R, c:C});
+
+        if(!worksheet[cellAddress]) continue;
+
+        worksheet[cellAddress].s = {
+          font:{
+            name:"Times New Roman",
+            sz:12,
+            bold:R === 0
+          },
+          alignment:{
+            horizontal:"center",
+            vertical:"center",
+            wrapText:true
+          },
+          border:{
+            top:{style:"thin", color:{rgb:"000000"}},
+            bottom:{style:"thin", color:{rgb:"000000"}},
+            left:{style:"thin", color:{rgb:"000000"}},
+            right:{style:"thin", color:{rgb:"000000"}}
+          }
+        };
+
+        if(R === 0){
+          worksheet[cellAddress].s.fill = {
+            fgColor:{rgb:"D9EAF7"}
+          };
+        }
+      }
+    }
+
+    worksheet["!freeze"] = {
+      xSplit: 0,
+      ySplit: 1
+    };
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      sheetName
+    );
+
+    XLSX.writeFile(
+      workbook,
+      fileName
+    );
+
+  }catch(error){
+    console.error(error);
+    alert("Lỗi khi xuất Excel. Kiểm tra API hoặc kết nối mạng.");
+  }
+}
+
+function loadDienLuc(){
+  const select = document.getElementById("dienlucSelect");
+  const currentValue = select.value;
+
+  select.innerHTML = "";
+
+  const dienlucs = [...new Set(
+    allData
+      .map(item => item["Điện lực"])
+      .filter(Boolean)
+  )];
+
+  dienlucs.forEach(dl => {
+    const option = document.createElement("option");
+    option.value = dl;
+    option.text = dl;
+    select.appendChild(option);
+  });
+
+  if(currentValue && dienlucs.includes(currentValue)){
+    select.value = currentValue;
+  }
+
+  select.onchange = updateCharts;
+  updateCharts();
+}
+
+function getData(dienluc, hangmuc){
+  return allData
+    .filter(item =>
+      item["Điện lực"] === dienluc &&
+      String(item["Hạng mục"]).trim() === hangmuc
+    )
+    .sort((a,b) => num(a["Tháng"]) - num(b["Tháng"]));
+}
+
+function getDonVi(hangmuc){
+  const row = allData.find(item =>
+    String(item["Hạng mục"]).trim() === hangmuc
+  );
+
+  return row?.["Đơn vị"] || "";
+}
+
+function getTongPCGiaoToanCongTy(hangmuc){
+  const map = {};
+
+  allData
+    .filter(item => String(item["Hạng mục"]).trim() === hangmuc)
+    .forEach(item => {
+      const key = item["Điện lực"] + "_" + hangmuc;
+
+      if(!map[key]){
+        map[key] = 0;
+      }
+
+      map[key] = Math.max(
+        map[key],
+        num(item["KH năm"])
+      );
+    });
+
+  return Object.values(map).reduce((a,b) => a + b, 0);
+}
+
+function renderCompanySummary(){
+  const container = document.getElementById("companySummary");
+  container.innerHTML = "";
+
+  hangMucList.forEach(hm => {
+    const data = allData.filter(item =>
+      String(item["Hạng mục"]).trim() === hm
+    );
+
+    if(data.length === 0) return;
+
+    const donvi = getDonVi(hm);
+    const tongPCGiao = getTongPCGiaoToanCongTy(hm);
+
+    const luyKeECP = data.reduce(
+      (sum,item) => sum + num(item["Thực hiện"]), 0
+    );
+
+    const tienDo = tongPCGiao > 0
+      ? luyKeECP / tongPCGiao * 100
+      : 0;
+
+    container.innerHTML += `
+      <div class="summary-card">
+        <div class="summary-title">${tenHangMuc(hm)}</div>
+
+        <div class="summary-line">
+          Tổng PC giao:
+          <span class="summary-value">${formatNumber(tongPCGiao)} ${donvi}</span>
+        </div>
+
+        <div class="summary-line">
+          Lũy kế ECP:
+          <span class="summary-value">${formatNumber(luyKeECP)} ${donvi}</span>
+        </div>
+
+        <div class="summary-line">
+          Hoàn thành:
+          <span class="summary-value">${tienDo.toFixed(1)}%</span>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderKPI(kpiId, data){
+  const donvi = data[0]?.["Đơn vị"] || "";
+
+  const tongPCGiao = Math.max(...data.map(item => num(item["KH năm"])));
+
+  const luyKeECP = data.reduce(
+    (sum,item) => sum + num(item["Thực hiện"]), 0
+  );
+
+  const tongBaoCao = data.reduce(
+    (sum,item) => sum + getBaoCao(item), 0
+  );
+
+  const tienDo = tongPCGiao > 0
+    ? luyKeECP / tongPCGiao * 100
+    : 0;
+
+  document.getElementById(kpiId).innerHTML = `
+    <div class="kpi">
+      <div class="kpi-title">Tổng PC giao</div>
+      <div class="kpi-value">${formatNumber(tongPCGiao)} ${donvi}</div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-title">Lũy kế thực hiện ECP</div>
+      <div class="kpi-value">${formatNumber(luyKeECP)} ${donvi}</div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-title">Tổng báo cáo</div>
+      <div class="kpi-value">${formatNumber(tongBaoCao)} ${donvi}</div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-title">Tiến độ/KH năm</div>
+      <div class="kpi-value">${tienDo.toFixed(1)}%</div>
+    </div>
+  `;
+}
+
+function createChart(canvasId, data, chartType){
+  const labels = data.map(item => "T" + item["Tháng"]);
+
+  const khThang = data.map(item => num(item["KH tháng"]));
+  const thucHien = data.map(item => num(item["Thực hiện"]));
+  const baoCao = data.map(item => getBaoCao(item));
+
+  return new Chart(document.getElementById(canvasId), {
+    type: chartType,
+    data:{
+      labels: labels,
+      datasets:[
+        {
+          label:"KH tháng",
+          data:khThang,
+          borderWidth:2
+        },
+        {
+          label:"Thực hiện ECP",
+          data:thucHien,
+          borderWidth:2,
+          tension:0.3
+        },
+        {
+          label:"Báo cáo",
+          data:baoCao,
+          borderWidth:2,
+          tension:0.3
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:true,
+      plugins:{
+        legend:{
+          position:"bottom"
+        }
+      },
+      scales:{
+        y:{
+          beginAtZero:true
+        }
+      }
+    }
+  });
+}
+
+function drawOne(config){
+  const data = getData(config.dienluc, config.hangmuc);
+
+  const card = document.getElementById(config.cardId);
+  card.style.display = data.length ? "block" : "none";
+
+  if(config.chartObj){
+    config.chartObj.destroy();
+  }
+
+  if(data.length === 0){
+    return null;
+  }
+
+  renderKPI(config.kpiId, data);
+
+  return createChart(
+    config.canvasId,
+    data,
+    config.chartType
+  );
+}
+
+function updateCharts(){
+  const dienluc = document.getElementById("dienlucSelect").value;
+
+  chart110 = drawOne({
+    dienluc,
+    hangmuc:"110kV",
+    cardId:"card110",
+    kpiId:"kpi110",
+    canvasId:"chart110",
+    chartType:"line",
+    chartObj:chart110
+  });
+
+  chart35 = drawOne({
+    dienluc,
+    hangmuc:"35kV",
+    cardId:"card35",
+    kpiId:"kpi35",
+    canvasId:"chart35",
+    chartType:"line",
+    chartObj:chart35
+  });
+
+  chart22 = drawOne({
+    dienluc,
+    hangmuc:"22kV",
+    cardId:"card22",
+    kpiId:"kpi22",
+    canvasId:"chart22",
+    chartType:"bar",
+    chartObj:chart22
+  });
+
+  chart04 = drawOne({
+    dienluc,
+    hangmuc:"0.4kV",
+    cardId:"card04",
+    kpiId:"kpi04",
+    canvasId:"chart04",
+    chartType:"line",
+    chartObj:chart04
+  });
+
+  chartTBA = drawOne({
+    dienluc,
+    hangmuc:"TBA",
+    cardId:"cardTBA",
+    kpiId:"kpiTBA",
+    canvasId:"chartTBA",
+    chartType:"bar",
+    chartObj:chartTBA
+  });
+}
+
+document
+  .getElementById("reloadBtn")
+  .addEventListener("click", loadData);
+
+loadData();
+</script>
+
+</body>
+</html>
