@@ -95,7 +95,7 @@
       font-size:16px;
       border-radius:9px;
       border:1px solid #ccc;
-      width:300px;
+      width:220px;
     }
 
     button, .sheet-btn{
@@ -120,6 +120,49 @@
 
     .export-btn{
       color:#006b2e;
+    }
+
+    .rank-btn{
+      color:#8a4b00;
+    }
+
+    .ranking-section{
+      display:none;
+      background:white;
+      padding:22px;
+      border-radius:18px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.12);
+      margin-bottom:22px;
+    }
+
+    .ranking-section h2{
+      text-align:center;
+      color:#003366;
+      margin-top:0;
+      margin-bottom:20px;
+    }
+
+    .ranking-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:22px;
+    }
+
+    .ranking-card{
+      background:#f8fbff;
+      padding:18px;
+      border-radius:16px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+      min-height:430px;
+    }
+
+    .ranking-card h3{
+      color:#003366;
+      margin-top:0;
+    }
+
+    .ranking-card canvas{
+      height:350px !important;
     }
 
     .grid{
@@ -181,7 +224,8 @@
     }
 
     @media(max-width:900px){
-      .grid{
+      .grid,
+      .ranking-grid{
         grid-template-columns:1fr;
       }
 
@@ -241,6 +285,40 @@
       📥 Thực hiện tháng trước
     </button>
 
+    <button class="rank-btn" onclick="showRanking()">
+      🏆 BXH các Điện lực
+    </button>
+
+  </div>
+
+</div>
+
+<div class="ranking-section" id="rankingSection">
+
+  <h2>BẢNG XẾP HẠNG LŨY KẾ THỰC HIỆN ECP CÁC ĐIỆN LỰC</h2>
+
+  <div class="ranking-grid">
+
+    <div class="ranking-card">
+      <h3>BXH đường dây 35kV (km)</h3>
+      <canvas id="rank35"></canvas>
+    </div>
+
+    <div class="ranking-card">
+      <h3>BXH đường dây 22kV (km)</h3>
+      <canvas id="rank22"></canvas>
+    </div>
+
+    <div class="ranking-card">
+      <h3>BXH đường dây 0.4kV (km)</h3>
+      <canvas id="rank04"></canvas>
+    </div>
+
+    <div class="ranking-card">
+      <h3>BXH khối lượng TBA (Trạm)</h3>
+      <canvas id="rankTBA"></canvas>
+    </div>
+
   </div>
 
 </div>
@@ -284,6 +362,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwid_Ylociy3LiqFoWXSeFx
 
 let allData = [];
 let chart110, chart35, chart22, chart04, chartTBA;
+let rank35, rank22, rank04, rankTBA;
 
 const hangMucList = ["110kV","35kV","22kV","0.4kV","TBA"];
 
@@ -298,13 +377,8 @@ function tenHangMuc(hm){
 
 function num(value){
   if(value === "" || value === null || value === undefined) return 0;
-
-  let text = String(value)
-    .trim()
-    .replace(",", ".");
-
+  let text = String(value).trim().replace(",", ".");
   if(text === "") return 0;
-
   return Number(text) || 0;
 }
 
@@ -321,7 +395,6 @@ function getBaoCao(item){
   const key = Object.keys(item).find(k =>
     normalizeText(k).includes("bao cao")
   );
-
   if(!key) return 0;
   return num(item[key]);
 }
@@ -440,11 +513,6 @@ async function exportSheet(sheetName, fileName){
         }
       }
     }
-
-    worksheet["!freeze"] = {
-      xSplit: 0,
-      ySplit: 1
-    };
 
     XLSX.utils.book_append_sheet(
       workbook,
@@ -735,6 +803,145 @@ function updateCharts(){
     canvasId:"chartTBA",
     chartType:"bar",
     chartObj:chartTBA
+  });
+}
+
+function getRankingData(hangmuc){
+
+  const map = {};
+
+  allData
+    .filter(item => String(item["Hạng mục"]).trim() === hangmuc)
+    .forEach(item => {
+
+      const dl = item["Điện lực"];
+
+      if(!dl) return;
+
+      if(!map[dl]){
+        map[dl] = 0;
+      }
+
+      map[dl] += num(item["Thực hiện"]);
+
+    });
+
+  return Object.entries(map)
+    .map(([dienluc, value]) => ({
+      dienluc,
+      value
+    }))
+    .sort((a,b) => b.value - a.value);
+}
+
+function getRankColor(hangmuc){
+  if(hangmuc === "35kV") return "rgba(0, 91, 170, 0.85)";
+  if(hangmuc === "22kV") return "rgba(255, 140, 0, 0.85)";
+  if(hangmuc === "0.4kV") return "rgba(0, 150, 80, 0.85)";
+  if(hangmuc === "TBA") return "rgba(130, 80, 180, 0.85)";
+  return "rgba(0, 91, 170, 0.85)";
+}
+
+function createRankingChart(canvasId, data, label, hangmuc, donvi){
+
+  const labels = data.map(item => item.dienluc);
+  const values = data.map(item => item.value);
+
+  return new Chart(document.getElementById(canvasId), {
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[
+        {
+          label:label,
+          data:values,
+          backgroundColor:getRankColor(hangmuc),
+          borderColor:getRankColor(hangmuc),
+          borderWidth:1
+        }
+      ]
+    },
+    options:{
+      indexAxis:"y",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          display:false
+        },
+        tooltip:{
+          callbacks:{
+            label:function(context){
+              return "Lũy kế ECP: " + formatNumber(context.raw) + " " + donvi;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          beginAtZero:true,
+          title:{
+            display:true,
+            text:"Lũy kế thực hiện ECP (" + donvi + ")"
+          }
+        }
+      }
+    }
+  });
+}
+
+function showRanking(){
+
+  const section = document.getElementById("rankingSection");
+
+  section.style.display =
+    section.style.display === "none" || section.style.display === ""
+      ? "block"
+      : "none";
+
+  if(section.style.display === "none"){
+    return;
+  }
+
+  if(rank35) rank35.destroy();
+  if(rank22) rank22.destroy();
+  if(rank04) rank04.destroy();
+  if(rankTBA) rankTBA.destroy();
+
+  rank35 = createRankingChart(
+    "rank35",
+    getRankingData("35kV"),
+    "Lũy kế ECP 35kV",
+    "35kV",
+    "km"
+  );
+
+  rank22 = createRankingChart(
+    "rank22",
+    getRankingData("22kV"),
+    "Lũy kế ECP 22kV",
+    "22kV",
+    "km"
+  );
+
+  rank04 = createRankingChart(
+    "rank04",
+    getRankingData("0.4kV"),
+    "Lũy kế ECP 0.4kV",
+    "0.4kV",
+    "km"
+  );
+
+  rankTBA = createRankingChart(
+    "rankTBA",
+    getRankingData("TBA"),
+    "Lũy kế ECP TBA",
+    "TBA",
+    "Trạm"
+  );
+
+  section.scrollIntoView({
+    behavior:"smooth"
   });
 }
 
